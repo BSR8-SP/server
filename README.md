@@ -1,2 +1,2 @@
 # server
-Backend do projeto AjudaSP 
+Backend do projeto BSR8-SP
