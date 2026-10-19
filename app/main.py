@@ -1,7 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from .routers import template
+from app.database import init_db
+from app.routers import template
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(template.router)
