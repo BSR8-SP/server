@@ -17,14 +17,6 @@ def create_comment(
 ):
     return comment_service.add_comment(db, body, bus_line_id)
 
-@router.get("/tempo-add")
-def create_comment(
-    db: Session = Depends(get_db),
-    body: str = "",
-    bus_line_id: int = None
-):
-    return comment_service.add_comment(db, body, bus_line_id)
-
 @router.get("/fetch")
 def fetch_comments(
     db: Session = Depends(get_db),
@@ -34,5 +26,15 @@ def fetch_comments(
 ):
     return comment_service.fetch_comments(
         db, bus_line_id, page, limit
+    )
+
+@router.post("/interact")
+def interact_with_comment(
+    db: Session = Depends(get_db),
+    comment_id : int = None,
+    interaction_type : str = Query(default="positive", pattern="^(positive|negative)$")
+):
+    return comment_service.interact_with_comment(
+        db, comment_id, interaction_type
     )
 
