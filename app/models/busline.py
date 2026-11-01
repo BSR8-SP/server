@@ -1,5 +1,5 @@
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -12,9 +12,15 @@ class BusLine(Base):
         autoincrement=True,
     )
 
-    busline_code: Mapped[str] = mapped_column(
+    bus_line_code: Mapped[str] = mapped_column(
         String,
         unique=True,
         nullable=False,
         index=True,
+    )
+
+    comments = relationship(
+        "Comment",
+        back_populates="busline",
+        cascade="all, delete-orphan",
     )

@@ -35,20 +35,9 @@ class Rating(Base):
         String(30),
         nullable=False,
     )
-
-    # User is optional: anonymous ratings are allowed.
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=True,
-    )
-
-    user: Mapped["User | None"] = relationship(
-        "User",
-        back_populates="ratings",
-    )
-
+    
     # Bus line is mandatory.
-    busline_id: Mapped[int] = mapped_column(
+    bus_line_id: Mapped[int] = mapped_column(
         ForeignKey("bus_lines.id"),
         nullable=False,
     )
