@@ -35,6 +35,11 @@ class Rating(Base):
         String(30),
         nullable=False,
     )
+
+    direction: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+    )
     
     # Bus line is mandatory.
     bus_line_id: Mapped[int] = mapped_column(
