@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# SPTrans GTFS files (large, downloaded by each developer)
+data/gtfs/
