@@ -11,7 +11,7 @@ def test_fetch_comments_route(client, populated_db):
     assert len(response.json()) == 5
 
 
-def test_fetch_comments_route_by_busline(client, populated_db):
+def test_fetch_comments_route_by_bus_line(client, populated_db):
     response = client.get(
         "/comments/fetch",
         params={"bus_line_id": populated_db.id},
@@ -56,7 +56,7 @@ def test_fetch_comments_route_second_page(client, populated_db):
 def test_fetch_comments_route_no_results(client):
     response = client.get(
         "/comments/fetch",
-        params={"bus_line_id": 9999},
+        params={"bus_line_id": "9999"},
     )
 
     assert response.status_code == 200

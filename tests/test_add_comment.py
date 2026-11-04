@@ -6,34 +6,34 @@ from app.models.comment import Comment
 from app.services.comment import add_comment
 
 
-def test_add_comment(db_session, busline):
+def test_add_comment(db_session, bus_line):
     comment = add_comment(
         db_session,
         "Great bus service!",
-        busline.id,
+        bus_line.id,
     )
 
     assert comment.id is not None
     assert comment.body == "Great bus service!"
-    assert comment.bus_line_id == busline.id
+    assert comment.bus_line_id == bus_line.id
 
 
-def test_add_comment_default_attributes(db_session, busline):
+def test_add_comment_default_attributes(db_session, bus_line):
     comment = add_comment(
         db_session,
         "Nice ride!",
-        busline.id,
+        bus_line.id,
     )
 
     assert comment.interactions_positive == 0
     assert comment.interactions_negative == 0
 
 
-def test_add_comment_persists_to_database(db_session, busline):
+def test_add_comment_persists_to_database(db_session, bus_line):
     comment = add_comment(
         db_session,
         "Very reliable!",
-        busline.id,
+        bus_line.id,
     )
 
     saved_comment = db_session.query(Comment).filter_by(
@@ -42,15 +42,15 @@ def test_add_comment_persists_to_database(db_session, busline):
 
     assert saved_comment is not None
     assert saved_comment.body == "Very reliable!"
-    assert saved_comment.bus_line_id == busline.id
+    assert saved_comment.bus_line_id == bus_line.id
 
 
-def test_add_comment_invalid_busline(db_session):
+def test_add_comment_invalid_bus_line(db_session):
     with pytest.raises(IntegrityError):
         add_comment(
             db_session,
             "Invalid bus line!",
-            9999,
+            "9999",
         )
 
     db_session.rollback()
@@ -58,12 +58,12 @@ def test_add_comment_invalid_busline(db_session):
     assert db_session.query(Comment).count() == 0
 
 
-def test_add_comment_empty_body(db_session, busline):
+def test_add_comment_empty_body(db_session, bus_line):
     with pytest.raises(IntegrityError):
         add_comment(
             db_session,
             None,
-            busline.id,
+            bus_line.id,
         )
 
     db_session.rollback()
@@ -71,13 +71,13 @@ def test_add_comment_empty_body(db_session, busline):
     assert db_session.query(Comment).count() == 0
 
 
-def test_busline_relationship(db_session, busline):
+def test_bus_line_relationship(db_session, bus_line):
     comment = add_comment(
         db_session,
         "Good service!",
-        busline.id,
+        bus_line.id,
     )
 
-    assert comment.busline.id == busline.id
-    assert comment.busline.bus_line_code == "123"
-    assert comment in busline.comments
+    assert comment.bus_line.id == bus_line.id
+    assert comment.bus_line.bus_line_code == "123"
+    assert comment in bus_line.comments

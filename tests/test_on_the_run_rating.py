@@ -3,20 +3,21 @@ from datetime import datetime
 from app.models.rating import OnTheRunRating, GMT_MINUS_3
 
 
-def valid_payload(busline):
+def valid_payload(bus_line):
     return {
-        "bus_line_id": busline.id,
-        "direction": "forward",
+        "bus_line_id": bus_line.id,
         "section_start": 2,
         "section_end": 5,
+        "start_time": "09:00:00",
+        "end_time": "09:15:00",
         "crowdedness": 4.0,
     }
 
 
-def test_create_on_the_run_rating(client, busline):
+def test_create_on_the_run_rating(client, bus_line):
     response = client.post(
         "/ratings/on-the-run",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     assert response.status_code == 200
@@ -25,17 +26,18 @@ def test_create_on_the_run_rating(client, busline):
 
     assert data["id"] is not None
     assert data["rating_type"] == "on_the_run"
-    assert data["bus_line_id"] == busline.id
-    assert data["direction"] == "forward"
+    assert data["bus_line_id"] == bus_line.id
     assert data["section_start"] == 2
     assert data["section_end"] == 5
+    assert data["start_time"] == "09:00:00"
+    assert data["end_time"] == "09:15:00"
     assert data["crowdedness"] == 4.0
 
 
-def test_on_the_run_rating_default_values(client, busline):
+def test_on_the_run_rating_default_values(client, bus_line):
     response = client.post(
         "/ratings/on-the-run",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     data = response.json()
@@ -48,10 +50,10 @@ def test_on_the_run_rating_default_values(client, busline):
     assert data["created_at"] is not None
 
 
-def test_on_the_run_rating_persists(db_session, client, busline):
+def test_on_the_run_rating_persists(db_session, client, bus_line):
     response = client.post(
         "/ratings/on-the-run",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     rating_id = response.json()["id"]
@@ -63,26 +65,14 @@ def test_on_the_run_rating_persists(db_session, client, busline):
     ).first()
 
     assert saved_rating is not None
-    assert saved_rating.bus_line_id == busline.id
+    assert saved_rating.bus_line_id == bus_line.id
     assert saved_rating.crowdedness == 4.0
 
 
-def test_on_the_run_rating_backward_direction(client, busline):
-    payload = valid_payload(busline)
-    payload["direction"] = "backward"
-
-    response = client.post(
-        "/ratings/on-the-run",
-        json=payload,
-    )
-
-    assert response.status_code == 200
-    assert response.json()["direction"] == "backward"
-
-
-def test_on_the_run_rating_invalid_direction(client, busline):
-    payload = valid_payload(busline)
-    payload["direction"] = "sideways"
+def test_on_the_run_rating_invalid_time_range(client, bus_line):
+    payload = valid_payload(bus_line)
+    payload["start_time"] = "09:15:00"
+    payload["end_time"] = "09:00:00"
 
     response = client.post(
         "/ratings/on-the-run",
@@ -92,8 +82,8 @@ def test_on_the_run_rating_invalid_direction(client, busline):
     assert response.status_code == 422
 
 
-def test_on_the_run_rating_negative_section_start(client, busline):
-    payload = valid_payload(busline)
+def test_on_the_run_rating_negative_section_start(client, bus_line):
+    payload = valid_payload(bus_line)
     payload["section_start"] = -1
 
     response = client.post(
@@ -104,8 +94,8 @@ def test_on_the_run_rating_negative_section_start(client, busline):
     assert response.status_code == 422
 
 
-def test_on_the_run_rating_negative_section_end(client, busline):
-    payload = valid_payload(busline)
+def test_on_the_run_rating_negative_section_end(client, bus_line):
+    payload = valid_payload(bus_line)
     payload["section_end"] = -1
 
     response = client.post(
@@ -116,8 +106,8 @@ def test_on_the_run_rating_negative_section_end(client, busline):
     assert response.status_code == 422
 
 
-def test_on_the_run_rating_invalid_section_range(client, busline):
-    payload = valid_payload(busline)
+def test_on_the_run_rating_invalid_section_range(client, bus_line):
+    payload = valid_payload(bus_line)
     payload["section_start"] = 5
     payload["section_end"] = 5
 
@@ -129,8 +119,8 @@ def test_on_the_run_rating_invalid_section_range(client, busline):
     assert response.status_code == 422
 
 
-def test_on_the_run_rating_missing_crowdedness(client, busline):
-    payload = valid_payload(busline)
+def test_on_the_run_rating_missing_crowdedness(client, bus_line):
+    payload = valid_payload(bus_line)
     del payload["crowdedness"]
 
     response = client.post(
@@ -141,8 +131,8 @@ def test_on_the_run_rating_missing_crowdedness(client, busline):
     assert response.status_code == 422
 
 
-def test_on_the_run_rating_missing_busline(client, busline):
-    payload = valid_payload(busline)
+def test_on_the_run_rating_missing_bus_line(client, bus_line):
+    payload = valid_payload(bus_line)
     del payload["bus_line_id"]
 
     response = client.post(

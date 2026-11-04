@@ -6,12 +6,13 @@ import pytest
 from app.models.rating import LateRating, GMT_MINUS_3
 
 
-def valid_payload(busline):
+def valid_payload(bus_line):
     return {
-        "bus_line_id": busline.id,
-        "direction": "forward",
+        "bus_line_id": bus_line.id,
         "section_start": 1,
         "section_end": 4,
+        "start_time": "08:00:00",
+        "end_time": "08:30:00",
         "crowdedness": 3,
         "perceived_safety": 4,
         "infrastructure": 2,
@@ -28,10 +29,10 @@ def valid_payload(busline):
     }
 
 
-def test_create_late_rating(client, busline):
+def test_create_late_rating(client, bus_line):
     response = client.post(
         "/ratings/late",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     assert response.status_code == 200
@@ -40,16 +41,17 @@ def test_create_late_rating(client, busline):
 
     assert data["id"] is not None
     assert data["rating_type"] == "late"
-    assert data["bus_line_id"] == busline.id
-    assert data["direction"] == "forward"
+    assert data["bus_line_id"] == bus_line.id
     assert data["section_start"] == 1
     assert data["section_end"] == 4
+    assert data["start_time"] == "08:00:00"
+    assert data["end_time"] == "08:30:00"
 
 
-def test_late_rating_values(client, busline):
+def test_late_rating_values(client, bus_line):
     response = client.post(
         "/ratings/late",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     data = response.json()
@@ -61,8 +63,8 @@ def test_late_rating_values(client, busline):
     assert data["travel_time_minutes"] == 3
 
 
-def test_late_rating_default_values(client, busline):
-    payload = valid_payload(busline)
+def test_late_rating_default_values(client, bus_line):
+    payload = valid_payload(bus_line)
 
     del payload["crowdedness"]
     del payload["perceived_safety"]
@@ -83,18 +85,18 @@ def test_late_rating_default_values(client, busline):
     assert data["travel_time_minutes"] == -1
 
 
-def test_late_rating_report_date(client, busline):
+def test_late_rating_report_date(client, bus_line):
     response = client.post(
         "/ratings/late",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     assert response.status_code == 200
     assert response.json()["report_date"] == "2026-10-29"
 
 
-def test_late_rating_null_report_date(client, busline):
-    payload = valid_payload(busline)
+def test_late_rating_null_report_date(client, bus_line):
+    payload = valid_payload(bus_line)
     payload["report_date"] = None
 
     response = client.post("/ratings/late", json=payload)
@@ -106,8 +108,8 @@ def test_late_rating_null_report_date(client, busline):
     assert response.json()["report_date"] == expected_date
 
 
-def test_late_rating_omitted_report_date(client, busline):
-    payload = valid_payload(busline)
+def test_late_rating_omitted_report_date(client, bus_line):
+    payload = valid_payload(bus_line)
     del payload["report_date"]
 
     response = client.post("/ratings/late", json=payload)
@@ -119,20 +121,20 @@ def test_late_rating_omitted_report_date(client, busline):
     assert response.json()["report_date"] == expected_date
 
 
-def test_late_rating_exception_day(client, busline):
+def test_late_rating_exception_day(client, bus_line):
     response = client.post(
         "/ratings/late",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     assert response.status_code == 200
     assert response.json()["is_exception_day"] is False
 
 
-def test_late_rating_json_responses(client, busline):
+def test_late_rating_json_responses(client, bus_line):
     response = client.post(
         "/ratings/late",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     data = response.json()
@@ -147,17 +149,18 @@ def test_late_rating_json_responses(client, busline):
     }
 
 
-def test_late_rating_invalid_direction(client, busline):
-    payload = valid_payload(busline)
-    payload["direction"] = "sideways"
+def test_late_rating_invalid_time_range(client, bus_line):
+    payload = valid_payload(bus_line)
+    payload["start_time"] = "08:30:00"
+    payload["end_time"] = "08:00:00"
 
     response = client.post("/ratings/late", json=payload)
 
     assert response.status_code == 422
 
 
-def test_late_rating_invalid_section_range(client, busline):
-    payload = valid_payload(busline)
+def test_late_rating_invalid_section_range(client, bus_line):
+    payload = valid_payload(bus_line)
     payload["section_start"] = 4
     payload["section_end"] = 4
 
@@ -178,9 +181,9 @@ def test_late_rating_invalid_section_range(client, busline):
 )
 @pytest.mark.parametrize("value", [-5, -0.5, 0, 0.5, 6, 10])
 def test_late_rating_invalid_rating_values(
-    client, busline, field, value
+    client, bus_line, field, value
 ):
-    payload = valid_payload(busline)
+    payload = valid_payload(bus_line)
     payload[field] = value
 
     response = client.post("/ratings/late", json=payload)
@@ -192,8 +195,8 @@ def test_late_rating_invalid_rating_values(
     "value",
     [-1, 1, 2, 3, 4, 5],
 )
-def test_late_rating_valid_rating_values(client, busline, value):
-    payload = valid_payload(busline)
+def test_late_rating_valid_rating_values(client, bus_line, value):
+    payload = valid_payload(bus_line)
     payload["crowdedness"] = value
 
     response = client.post("/ratings/late", json=payload)
@@ -201,8 +204,8 @@ def test_late_rating_valid_rating_values(client, busline, value):
     assert response.status_code == 200
 
 
-def test_late_rating_missing_busline(client, busline):
-    payload = valid_payload(busline)
+def test_late_rating_missing_bus_line(client, bus_line):
+    payload = valid_payload(bus_line)
     del payload["bus_line_id"]
 
     response = client.post("/ratings/late", json=payload)
@@ -210,10 +213,10 @@ def test_late_rating_missing_busline(client, busline):
     assert response.status_code == 422
 
 
-def test_late_rating_persistence(db_session, client, busline):
+def test_late_rating_persistence(db_session, client, bus_line):
     response = client.post(
         "/ratings/late",
-        json=valid_payload(busline),
+        json=valid_payload(bus_line),
     )
 
     assert response.status_code == 200
@@ -230,6 +233,6 @@ def test_late_rating_persistence(db_session, client, busline):
 
     assert saved_rating is not None
     assert saved_rating.rating_type == "late"
-    assert saved_rating.bus_line_id == busline.id
+    assert saved_rating.bus_line_id == bus_line.id
     assert saved_rating.crowdedness == 3
     assert saved_rating.report_date.isoformat() == "2026-10-29"

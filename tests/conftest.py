@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 from app.database import Base
 
 # Register all models.
-from app.models.busline import BusLine
+from app.models.bus_line import BusLine
 from app.models.rating import Rating, LateRating, OnTheRunRating
 from app.models.comment import Comment
 
@@ -46,14 +46,14 @@ def db_session():
     engine.dispose()
 
 @pytest.fixture
-def busline(db_session):
-    busline = BusLine(bus_line_code="123")
+def bus_line(db_session):
+    bus_line = BusLine(id="123.1", bus_line_code="123")
 
-    db_session.add(busline)
+    db_session.add(bus_line)
     db_session.commit()
-    db_session.refresh(busline)
+    db_session.refresh(bus_line)
 
-    return busline
+    return bus_line
 
 @pytest.fixture
 def client(db_session):
@@ -68,11 +68,11 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 @pytest.fixture
-def populated_db(db_session, busline):
+def populated_db(db_session, bus_line):
     comments = [
         Comment(
             body=f"Comment {i}",
-            bus_line_id=busline.id,
+            bus_line_id=bus_line.id,
         )
         for i in range(1, 6)
     ]
@@ -80,4 +80,4 @@ def populated_db(db_session, busline):
     db_session.add_all(comments)
     db_session.commit()
 
-    return busline
+    return bus_line
