@@ -17,7 +17,7 @@ class Comment(Base):
         nullable=False,
     )
 
-    bus_line_id: Mapped[int] = mapped_column(
+    bus_line_id: Mapped[str] = mapped_column(
         ForeignKey("bus_lines.id"),
         nullable=False,
     )
@@ -34,4 +34,4 @@ class Comment(Base):
         nullable=False,
     )
 
-    busline = relationship("BusLine", back_populates="comments")
+    bus_line = relationship("BusLine", back_populates="comments")

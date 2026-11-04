@@ -20,9 +20,10 @@ def add_on_the_run_rating(
 ):
     rating = OnTheRunRating(
         bus_line_id=rating_data.bus_line_id,
-        direction=rating_data.direction,
         section_start=rating_data.section_start,
         section_end=rating_data.section_end,
+        start_time=rating_data.start_time,
+        end_time=rating_data.end_time,
         crowdedness=rating_data.crowdedness,
         report_date=datetime.now(GMT_MINUS_3).date(),
         is_exception_day=False,
@@ -41,9 +42,10 @@ def add_late_rating(
 ):
     rating = LateRating(
         bus_line_id=rating_data.bus_line_id,
-        direction=rating_data.direction,
         section_start=rating_data.section_start,
         section_end=rating_data.section_end,
+        start_time=rating_data.start_time,
+        end_time=rating_data.end_time,
 
         crowdedness=rating_data.crowdedness,
         perceived_safety=rating_data.perceived_safety,

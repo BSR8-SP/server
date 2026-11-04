@@ -1,8 +1,10 @@
-from datetime import date, datetime, timedelta, timezone
+
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -10,7 +12,7 @@ from sqlalchemy import (
     Integer,
     JSON,
     String,
-    Text,
+    Time,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +30,13 @@ def now_gmt_minus_3() -> datetime:
 class Rating(Base):
     __tablename__ = "ratings"
 
+    __table_args__ = (
+        CheckConstraint(
+            "end_time > start_time",
+            name="ck_rating_valid_time_range",
+        ),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # Single-table discriminator for the inheritance hierarchy.
@@ -36,18 +45,13 @@ class Rating(Base):
         nullable=False,
     )
 
-    direction: Mapped[str] = mapped_column(
-        String(10),
-        nullable=False,
-    )
-    
     # Bus line is mandatory.
-    bus_line_id: Mapped[int] = mapped_column(
+    bus_line_id: Mapped[str] = mapped_column(
         ForeignKey("bus_lines.id"),
         nullable=False,
     )
 
-    busline: Mapped["BusLine"] = relationship("BusLine")
+    bus_line: Mapped["BusLine"] = relationship("BusLine")
 
     section_start: Mapped[int] = mapped_column(
         Integer,
@@ -66,10 +70,20 @@ class Rating(Base):
         nullable=False,
     )
 
-    # Calendar date and timestamp are separate concepts.
+    # Calendar date and time interval are separate concepts.
     report_date: Mapped[date] = mapped_column(
         Date,
         default=lambda: now_gmt_minus_3().date(),
+        nullable=False,
+    )
+
+    start_time: Mapped[time] = mapped_column(
+        Time,
+        nullable=False,
+    )
+
+    end_time: Mapped[time] = mapped_column(
+        Time,
         nullable=False,
     )
 
@@ -123,10 +137,9 @@ class LateRating(Rating):
         nullable=False,
     )
 
-    # JSON objects/arrays are stored as native JSON.
-    infrastructure_questions_response: Mapped[dict[str, Any] | list[Any] | None] = (
-        mapped_column(JSON, nullable=True)
-    )
+    infrastructure_questions_response: Mapped[
+        dict[str, Any] | list[Any] | None
+    ] = mapped_column(JSON, nullable=True)
 
     perceived_safety_questions_response: Mapped[
         dict[str, Any] | list[Any] | None

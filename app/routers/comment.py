@@ -13,14 +13,14 @@ router = APIRouter(
 def create_comment(
     db: Session = Depends(get_db),
     body: str = "",
-    bus_line_id: int = None
+    bus_line_id: str | None = None,
 ):
     return comment_service.add_comment(db, body, bus_line_id)
 
 @router.get("/fetch")
 def fetch_comments(
     db: Session = Depends(get_db),
-    bus_line_id: int | None = None,
+    bus_line_id: str | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
 ):
@@ -37,4 +37,3 @@ def interact_with_comment(
     return comment_service.interact_with_comment(
         db, comment_id, interaction_type
     )
-

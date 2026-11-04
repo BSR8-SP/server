@@ -2,7 +2,11 @@ from sqlalchemy.orm import Session
 from app.models.comment import Comment
 from fastapi import HTTPException
 
-def add_comment(db: Session, body: str = "", bus_line_id: int = None):
+def add_comment(
+    db: Session,
+    body: str = "",
+    bus_line_id: str | None = None,
+):
     comment = Comment(
         body=body,
         bus_line_id=bus_line_id,
@@ -14,7 +18,12 @@ def add_comment(db: Session, body: str = "", bus_line_id: int = None):
 
     return comment
 
-def fetch_comments(db: Session, bus_line_id: int | None = None, page: int = 1, limit: int = 10):
+def fetch_comments(
+    db: Session,
+    bus_line_id: str | None = None,
+    page: int = 1,
+    limit: int = 10,
+):
     query = db.query(Comment).order_by(Comment.id)
 
     if bus_line_id is not None:

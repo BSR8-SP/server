@@ -1,34 +1,40 @@
-from datetime import date
-from typing import Any, Literal
+from datetime import date, time
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator, field_validator
 
 
 class OnTheRunRatingCreate(BaseModel):
-    bus_line_id: int = Field(gt=0)
-    direction: Literal["forward", "backward"]
+    bus_line_id: str = Field(min_length=1)
 
     section_start: int = Field(ge=0)
     section_end: int = Field(ge=0)
 
+    start_time: time
+    end_time: time
+
     crowdedness: float
 
     @model_validator(mode="after")
-    def validate_section(self):
+    def validate_ranges(self):
         if self.section_end <= self.section_start:
             raise ValueError(
                 "section_end must be greater than section_start"
             )
+        if self.end_time <= self.start_time:
+            raise ValueError("end_time must be greater than start_time")
 
         return self
 
 
 class LateRatingCreate(BaseModel):
-    bus_line_id: int = Field(gt=0)
-    direction: Literal["forward", "backward"]
+    bus_line_id: str = Field(min_length=1)
 
     section_start: int = Field(ge=0)
     section_end: int = Field(ge=0)
+
+    start_time: time
+    end_time: time
 
     crowdedness: float = -1
     perceived_safety: float = -1
@@ -58,9 +64,11 @@ class LateRatingCreate(BaseModel):
         )
 
     @model_validator(mode="after")
-    def validate_section(self):
+    def validate_ranges(self):
         if self.section_end <= self.section_start:
             raise ValueError(
                 "section_end must be greater than section_start"
             )
+        if self.end_time <= self.start_time:
+            raise ValueError("end_time must be greater than start_time")
         return self
