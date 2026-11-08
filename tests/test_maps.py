@@ -349,3 +349,86 @@ def test_gtfs_reads_each_shape_once(tmp_path):
 
 def test_gtfs_missing_files(tmp_path):
     assert GTFS(tmp_path).route_coordinates("875A-10", 1) is None
+
+
+def make_gtfs_zip(files, folder=""):
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zip_file:
+        for name, content in files.items():
+            zip_file.writestr(folder + name, content)
+    return buffer.getvalue()
+
+
+GTFS_ZIP_FILES = {
+    "trips.txt": "route_id,service_id,trip_id,trip_headsign,direction_id,shape_id\n"
+                 "875A-10,USD,875A-10-0,Aeroporto,0,100\n",
+    "shapes.txt": "shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence\n"
+                  "100,-23.10,-46.10,1\n",
+    "stops.txt": "not needed\n",
+}
+
+
+def http_returning(response):
+    requests = []
+
+    def handler(request):
+        requests.append(str(request.url))
+        return response
+
+    return httpx.Client(transport=httpx.MockTransport(handler)), requests
+
+
+def test_gtfs_download_extracts_only_needed_files(tmp_path):
+    folder = tmp_path / "gtfs"
+    http, requests = http_returning(
+        httpx.Response(200, content=make_gtfs_zip(GTFS_ZIP_FILES, "gtfs/"))
+    )
+    gtfs = GTFS(folder, url="https://example.test/gtfs.zip")
+
+    assert gtfs.download_if_missing(http) is True
+    assert requests == ["https://example.test/gtfs.zip"]
+    assert sorted(path.name for path in folder.iterdir()) == ["shapes.txt", "trips.txt"]
+    assert gtfs.route_coordinates("875A-10", 1) == [[-46.10, -23.10]]
+
+
+def test_gtfs_download_skipped_when_files_exist(tmp_path):
+    write_gtfs(tmp_path)
+    http, requests = http_returning(httpx.Response(500))
+    gtfs = GTFS(tmp_path, url="https://example.test/gtfs.zip")
+
+    assert gtfs.download_if_missing(http) is True
+    assert requests == []
+
+
+def test_gtfs_download_without_url(tmp_path):
+    http, requests = http_returning(httpx.Response(500))
+
+    assert GTFS(tmp_path, url=None).download_if_missing(http) is False
+    assert requests == []
+
+
+def test_gtfs_download_http_error(tmp_path):
+    http, _ = http_returning(httpx.Response(404))
+    gtfs = GTFS(tmp_path / "gtfs", url="https://example.test/gtfs.zip")
+
+    assert gtfs.download_if_missing(http) is False
+    assert gtfs.route_coordinates("875A-10", 1) is None
+
+
+def test_gtfs_download_not_a_zip(tmp_path):
+    http, _ = http_returning(httpx.Response(200, content=b"<html>login</html>"))
+    gtfs = GTFS(tmp_path / "gtfs", url="https://example.test/gtfs.zip")
+
+    assert gtfs.download_if_missing(http) is False
+
+
+def test_gtfs_download_zip_without_shapes(tmp_path):
+    files = {"trips.txt": GTFS_ZIP_FILES["trips.txt"]}
+    http, _ = http_returning(httpx.Response(200, content=make_gtfs_zip(files)))
+    gtfs = GTFS(tmp_path / "gtfs", url="https://example.test/gtfs.zip")
+
+    assert gtfs.download_if_missing(http) is False
+    assert not (tmp_path / "gtfs" / "trips.txt").exists()

@@ -1,12 +1,26 @@
 import csv
+import logging
 import os
+import tempfile
+import zipfile
 from functools import lru_cache
 from pathlib import Path
+
+import httpx
 
 
 # Folder with the SPTrans GTFS files (trips.txt and shapes.txt).
 # The files are large and are not committed; see the README.
 GTFS_DIR = os.getenv("GTFS_DIR", "data/gtfs")
+
+# Optional direct link to the GTFS .zip, used when the files are missing.
+# SPTrans only offers the .zip after a login on its website, so the group
+# hosts a copy (e.g. a GitHub release) and points this variable to it.
+GTFS_URL = os.getenv("GTFS_URL")
+
+GTFS_FILES = ("trips.txt", "shapes.txt")
+
+logger = logging.getLogger(__name__)
 
 
 class GTFS:
@@ -16,16 +30,62 @@ class GTFS:
     and shapes.txt has the points of each shape, which follow the streets.
     """
 
-    def __init__(self, folder: str | Path = GTFS_DIR):
+    def __init__(self, folder: str | Path = GTFS_DIR, url: str | None = GTFS_URL):
         self.folder = Path(folder)
+        self.url = url
         self.shape_ids: dict[tuple[str, int], str] | None = None
         # Each shape is read once and then kept in memory.
         self.read_shape = lru_cache(maxsize=256)(self.read_shape)
 
     def available(self) -> bool:
-        return (self.folder / "trips.txt").exists() and (
-            self.folder / "shapes.txt"
-        ).exists()
+        return all((self.folder / name).exists() for name in GTFS_FILES)
+
+    def download_if_missing(self, http_client: httpx.Client | None = None) -> bool:
+        """Downloads the GTFS .zip from GTFS_URL when the files are missing.
+
+        Only trips.txt and shapes.txt are extracted. Returns True when the
+        files are available afterwards. A failed download is only logged,
+        so the server still starts and routes fall back to the stops.
+        """
+        if self.available():
+            return True
+        if not self.url:
+            return False
+
+        http = http_client or httpx.Client(follow_redirects=True, timeout=300)
+        try:
+            with tempfile.TemporaryFile() as archive:
+                with http.stream("GET", self.url) as response:
+                    response.raise_for_status()
+                    for chunk in response.iter_bytes():
+                        archive.write(chunk)
+
+                self.extract(archive)
+        except (httpx.HTTPError, zipfile.BadZipFile, KeyError) as error:
+            logger.warning("Could not download the GTFS from %s: %s", self.url, error)
+            return False
+        finally:
+            if http_client is None:
+                http.close()
+
+        logger.info("GTFS downloaded to %s", self.folder)
+        return True
+
+    def extract(self, archive) -> None:
+        with zipfile.ZipFile(archive) as zip_file:
+            # The files may be inside a folder in the .zip.
+            members = {Path(name).name: name for name in zip_file.namelist()}
+            missing = [name for name in GTFS_FILES if name not in members]
+            if missing:
+                raise KeyError(f"{', '.join(missing)} not in the .zip")
+
+            self.folder.mkdir(parents=True, exist_ok=True)
+            for name in GTFS_FILES:
+                with zip_file.open(members[name]) as source, open(
+                    self.folder / name, "wb"
+                ) as target:
+                    while chunk := source.read(1024 * 1024):
+                        target.write(chunk)
 
     def load_shape_ids(self) -> dict[tuple[str, int], str]:
         if self.shape_ids is None:
