@@ -32,7 +32,7 @@ class Rating(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "end_time > start_time",
+            "end_time >= start_time",
             name="ck_rating_valid_time_range",
         ),
     )
@@ -60,6 +60,18 @@ class Rating(Base):
 
     section_end: Mapped[int] = mapped_column(
         Integer,
+        nullable=False,
+    )
+
+    latitude: Mapped[float] = mapped_column(
+        Float,
+        default=0,
+        nullable=False,
+    )
+
+    longitude: Mapped[float] = mapped_column(
+        Float,
+        default=0,
         nullable=False,
     )
 
@@ -138,11 +150,11 @@ class LateRating(Rating):
     )
 
     infrastructure_questions_response: Mapped[
-        dict[str, Any] | list[Any] | None
+        list[Any] | None
     ] = mapped_column(JSON, nullable=True)
 
     perceived_safety_questions_response: Mapped[
-        dict[str, Any] | list[Any] | None
+        list[Any] | None
     ] = mapped_column(JSON, nullable=True)
 
     __mapper_args__ = {
