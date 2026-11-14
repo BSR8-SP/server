@@ -1,5 +1,5 @@
 
-from collections import Counter
+from collections import Counter, defaultdict
 from statistics import pstdev
 from datetime import time
 
@@ -10,12 +10,15 @@ from app.schemas.statistics import BusLineStatisticsSpecification
 from app.models.rating import LateRating, OnTheRunRating, Rating
 from app import config
 
+from app.services.sptrans import SPTransClient
+from app.services.gtfs import GTFS
+
 
 # ============================================================
 # 1. DATABASE QUERIES
 # ============================================================
 
-def apply_rating_filters(
+async def apply_rating_filters(
     query,
     bus_line_id: str | None,
     section_start: int | None,
@@ -503,39 +506,84 @@ def get_bus_line_statistics(
 
 
 
-def get_all_ratings_for_map(db: Session):
-    """Retrieve all ratings in a simplified format for map visualization."""
+def build_rating_map_points(
+    ratings: list[Rating],
+    stops: list[tuple[float, float]],
+):
+    """Expand ratings into one map point per covered bus stop."""
+
+    points = []
+
+    for rating in ratings:
+        section_stops = stops[
+            rating.section_start:rating.section_end + 1
+        ]
+
+        for latitude, longitude in section_stops:
+            points.append({
+                "rating_id": rating.id,
+                "latitude": latitude,
+                "longitude": longitude,
+                "crowdedness": (
+                    rating.crowdedness
+                    if rating.crowdedness >= 0
+                    else None
+                ),
+                "infrastructure": (
+                    rating.infrastructure
+                    if isinstance(rating, LateRating)
+                    and rating.infrastructure >= 0
+                    else None
+                ),
+                "perceived_safety": (
+                    rating.perceived_safety
+                    if isinstance(rating, LateRating)
+                    and rating.perceived_safety >= 0
+                    else None
+                ),
+                "traffic_quality": (
+                    rating.traffic_quality
+                    if isinstance(rating, LateRating)
+                    and rating.traffic_quality >= 0
+                    else None
+                ),
+            })
+
+    return points
+
+
+async def get_all_ratings_for_map(
+    db: Session,
+    sptrans_client: SPTransClient,
+):
+    """Retrieve all ratings and expand them into bus stop map points."""
 
     ratings = db.query(Rating).all()
 
-    return [
-        {
-            "id": rating.id,
-            "latitude": rating.latitude,
-            "longitude": rating.longitude,
-            "crowdedness": (
-                rating.crowdedness
-                if rating.crowdedness >= 0
-                else None
-            ),
-            "infrastructure": (
-                rating.infrastructure
-                if isinstance(rating, LateRating)
-                and rating.infrastructure >= 0
-                else None
-            ),
-            "perceived_safety": (
-                rating.perceived_safety
-                if isinstance(rating, LateRating)
-                and rating.perceived_safety >= 0
-                else None
-            ),
-            "traffic_quality": (
-                rating.traffic_quality
-                if isinstance(rating, LateRating)
-                and rating.traffic_quality >= 0
-                else None
-            ),
-        }
-        for rating in ratings
-    ]
+    # Group ratings by database bus line ID.
+    ratings_by_line = defaultdict(list)
+
+    for rating in ratings:
+        ratings_by_line[rating.bus_line_id].append(rating)
+
+    map_points = []
+
+    # Fetch stops once for each distinct bus line.
+    for bus_line_id, line_ratings in ratings_by_line.items():
+
+        # Obtain the complete SPTrans bus line code from the database.
+        bus_line_code = line_ratings[0].bus_line.code
+
+        stops = await bus_stop_positions(
+            bus_line_code,
+            sptrans_client,
+        )
+
+        map_points.extend(
+            build_rating_map_points(
+                line_ratings,
+                stops,
+            )
+        )
+
+    return map_points
