@@ -1,6 +1,5 @@
 
-from datetime import datetime
-
+from datetime import datetime, time
 import pytest
 
 from app.models.rating import LateRating, GMT_MINUS_3
@@ -11,21 +10,16 @@ def valid_payload(bus_line):
         "bus_line_id": bus_line.id,
         "section_start": 1,
         "section_end": 4,
-        "start_time": "08:00:00",
-        "end_time": "08:30:00",
+        "start_time": time(8, 0),
+        "end_time": time(8, 30),
         "crowdedness": 3,
         "perceived_safety": 4,
         "infrastructure": 2,
         "traffic_quality": 5,
         "travel_time_minutes": 3,
         "report_date": "2026-10-29",
-        "infrastructure_questions_response": {
-            "lighting": 4,
-            "accessibility": 3,
-        },
-        "perceived_safety_questions_response": {
-            "felt_safe": True,
-        },
+        "infrastructure_questions_response": [4, 3],
+        "perceived_safety_questions_response": [True],
     }
 
 
@@ -139,20 +133,15 @@ def test_late_rating_json_responses(client, bus_line):
 
     data = response.json()
 
-    assert data["infrastructure_questions_response"] == {
-        "lighting": 4,
-        "accessibility": 3,
-    }
+    assert data["infrastructure_questions_response"] == [4, 3]
 
-    assert data["perceived_safety_questions_response"] == {
-        "felt_safe": True,
-    }
+    assert data["perceived_safety_questions_response"] == [True]
 
 
 def test_late_rating_invalid_time_range(client, bus_line):
     payload = valid_payload(bus_line)
-    payload["start_time"] = "08:30:00"
-    payload["end_time"] = "08:00:00"
+    payload["start_time"] = time(8, 30)
+    payload["end_time"] = time(8, 0)
 
     response = client.post("/ratings/late", json=payload)
 
