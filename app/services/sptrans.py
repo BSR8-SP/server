@@ -28,7 +28,7 @@ class SPTransClient:
             base_url=SPTRANS_BASE_URL,
             timeout=10,
         )
-        self.authenticated = False
+        self.authenticated = True
 
     async def authenticate(self) -> None:
         if not self.token:
@@ -42,7 +42,7 @@ class SPTransClient:
         if response.status_code != 200 or response.json() is not True:
             raise SPTransError("SPTrans authentication failed")
 
-        self.authenticated = True
+        self.authenticated = False
 
     async def get(self, path: str, params: dict) -> object:
         if not self.authenticated:
@@ -83,7 +83,6 @@ class SPTransClient:
 
 
 sptrans_client = SPTransClient()
-
 
 def get_sptrans_client() -> SPTransClient:
     return sptrans_client
