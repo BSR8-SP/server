@@ -24,6 +24,16 @@ GTFS na área de desenvolvedores da SPTrans e copie `trips.txt` e `shapes.txt`
 para `data/gtfs/` (ou aponte outra pasta com a variável `GTFS_DIR`). A pasta
 `data/gtfs/` está no `.gitignore` porque os arquivos são grandes.
 
+Para não precisar copiar os arquivos à mão, defina `GTFS_URL` com um link
+direto para o `.zip` do GTFS (por exemplo, um release no GitHub do grupo). Ao
+subir, o servidor baixa o `.zip` e extrai só o `trips.txt` e o `shapes.txt`
+se eles ainda não estiverem na pasta. O link precisa entregar o `.zip` em
+si, sem página de login ou de confirmação no meio.
+
+```bash
+export GTFS_URL="https://github.com/<org>/<repo>/releases/download/gtfs/gtfs.zip"
+```
+
 Sem esses arquivos, ou se a linha não estiver no GTFS, o trajeto liga as
 paradas em linha reta. A propriedade `source` do trajeto diz qual foi usado
 (`gtfs` ou `stops`).
