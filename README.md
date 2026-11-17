@@ -16,6 +16,7 @@ Rotas do mapa:
 
 - `GET /maps/fetch_bus_lines?search=875A`: linhas cujo código ou nome de terminal contém `search`, uma por sentido.
 - `GET /maps/fetch_route?bus_line_code=875A-10&direction=1`: trajeto e paradas da linha em GeoJSON, pronto para o Leaflet. O `index` de cada parada define os trechos.
+- `GET /maps/locate_section?bus_line_code=875A-10&direction=1&latitude=-23.56&longitude=-46.65`: trecho da linha (par de paradas consecutivas `section_start`/`section_end`) em que a pessoa está, projetando a posição sobre o trajeto. Devolve `bus_line_id` no formato das avaliações, `distance_to_route_m` (distância da pessoa até o trajeto), `progress` (fração do trecho já percorrida) e `on_route` (distância até `max_distance_m`, padrão 200 m).
 
 ### Traçado das linhas (GTFS)
 
