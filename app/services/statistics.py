@@ -1,5 +1,6 @@
 
 from collections import Counter, defaultdict
+import json
 from statistics import pstdev
 from datetime import time
 
@@ -12,6 +13,7 @@ from app import config
 
 from app.services.sptrans import SPTransClient
 from app.services.gtfs import GTFS
+from app.services.maps import bus_stop_positions
 
 
 # ============================================================
@@ -521,7 +523,7 @@ def build_rating_map_points(
 
         for latitude, longitude in section_stops:
             points.append({
-                "rating_id": rating.id,
+                "id": rating.id,
                 "latitude": latitude,
                 "longitude": longitude,
                 "crowdedness": (
@@ -569,10 +571,7 @@ async def get_all_ratings_for_map(
     map_points = []
 
     # Fetch stops once for each distinct bus line.
-    for bus_line_id, line_ratings in ratings_by_line.items():
-
-        # Obtain the complete SPTrans bus line code from the database.
-        bus_line_code = line_ratings[0].bus_line.code
+    for bus_line_code, line_ratings in ratings_by_line.items():
 
         stops = await bus_stop_positions(
             bus_line_code,

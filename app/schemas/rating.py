@@ -7,22 +7,10 @@ from pydantic import BaseModel, Field, model_validator, field_validator
 class OnTheRunRatingCreate(BaseModel):
     bus_line_id: str = Field(min_length=1)
 
-    section_start: int = Field(ge=0)
-    section_end: int = Field(ge=0)
-
     latitude: float = 0
     longitude: float = 0
 
     crowdedness: float
-
-    @model_validator(mode="after")
-    def validate_ranges(self):
-        if self.section_end < self.section_start:
-            raise ValueError(
-                "section_end must be greater than or equal to section_start"
-            )
-
-        return self
 
 
 class LateRatingCreate(BaseModel):
@@ -33,9 +21,6 @@ class LateRatingCreate(BaseModel):
 
     start_time: time
     end_time: time
-
-    latitude: float = 0
-    longitude: float = 0
 
     crowdedness: float = -1
     perceived_safety: float = -1

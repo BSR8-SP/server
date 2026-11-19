@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.rating import OnTheRunRatingCreate, LateRatingCreate
 from app.services import rating as rating_service
+from app.services.gtfs import GTFS, get_gtfs
+from app.services.sptrans import SPTransClient, get_sptrans_client
 
 router = APIRouter(
     prefix="/ratings",
@@ -11,13 +13,17 @@ router = APIRouter(
 )
 
 @router.post("/on-the-run")
-def create_on_the_run_rating(
+async def create_on_the_run_rating(
     rating_data: OnTheRunRatingCreate,
     db: Session = Depends(get_db),
+    sptrans: SPTransClient = Depends(get_sptrans_client),
+    gtfs: GTFS = Depends(get_gtfs)
 ):
-    return rating_service.add_on_the_run_rating(
+    return await rating_service.add_on_the_run_rating(
         db,
         rating_data,
+        sptrans=sptrans,
+        gtfs=gtfs
     )
 
 @router.post("/late")
